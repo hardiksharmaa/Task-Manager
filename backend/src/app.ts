@@ -3,7 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
-
+import taskRoutes from "./routes/task.routes";
 
 dotenv.config();
 
@@ -18,5 +18,5 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/auth", authRoutes);
-
+app.use("/tasks", taskRoutes);
 export default app;
