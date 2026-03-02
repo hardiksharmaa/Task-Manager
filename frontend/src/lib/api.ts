@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
 let accessToken: string | null = null;
 
 export const setAccessToken = (token: string | null) => {
@@ -7,7 +9,7 @@ export const setAccessToken = (token: string | null) => {
 };
 
 const api = axios.create({
-  baseURL: "http://localhost:5001",
+  baseURL: API_URL,
   withCredentials: true,
 });
 
@@ -31,7 +33,7 @@ api.interceptors.response.use(
 
       try {
         const response = await axios.post(
-          "http://localhost:5001/auth/refresh",
+          `${API_URL}/auth/refresh`,
           {},
           { withCredentials: true }
         );
