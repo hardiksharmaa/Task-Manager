@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+// In production, NEXT_PUBLIC_API_URL should be "/api" to use Next.js rewrites (same-origin proxy)
 
 let accessToken: string | null = null;
 

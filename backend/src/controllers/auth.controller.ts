@@ -24,7 +24,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    sameSite: "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000,
     path: "/",
   });
@@ -54,7 +54,8 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    sameSite: "lax",
+    path: "/",
   });
 
   res.status(200).json({ success: true, message: "Logged out successfully" });
