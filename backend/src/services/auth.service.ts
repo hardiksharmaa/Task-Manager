@@ -2,6 +2,7 @@ import { prisma } from "../db/prisma";
 import { hashPassword, comparePassword } from "../utils/hash";
 import { verifyRefreshToken, generateAccessToken, generateRefreshToken } from "../utils/jwt";
 import crypto from "crypto";
+import { ConflictError, UnauthorizedError } from "../utils/appError";
 
 export const registerUser = async (
   email: string,
@@ -11,7 +12,7 @@ export const registerUser = async (
   const existing = await prisma.user.findUnique({ where: { email } });
 
   if (existing) {
-    throw new Error("User already exists");
+    throw new ConflictError("User already exists");
   }
 
   const hashed = await hashPassword(password);
@@ -39,7 +40,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
   });
 
   if (!storedToken) {
-    throw new Error("Invalid refresh token");
+    throw new UnauthorizedError("Invalid refresh token");
   }
 
   const newAccessToken = generateAccessToken({
@@ -55,10 +56,10 @@ export const loginUser = async (
 ) => {
   const user = await prisma.user.findUnique({ where: { email } });
 
-  if (!user) throw new Error("Invalid credentials");
+  if (!user) throw new UnauthorizedError("Invalid credentials");
 
   const valid = await comparePassword(password, user.password);
-  if (!valid) throw new Error("Invalid credentials");
+  if (!valid) throw new UnauthorizedError("Invalid credentials");
 
   const accessToken = generateAccessToken({
     id: user.id,

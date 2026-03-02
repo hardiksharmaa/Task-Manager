@@ -31,13 +31,16 @@ export const getTaskById = async (taskId: string, userId: string) => {
 export const updateTask = async (
   taskId: string,
   userId: string,
-  data: any
+  data: Partial<{
+    title: string;
+    description: string;
+    status: TaskStatus;
+    dueDate: Date;
+    priority: number;
+  }>
 ) => {
-  return prisma.task.updateMany({
-    where: {
-      id: taskId,
-      userId,
-    },
+  return prisma.task.update({
+    where: { id: taskId },
     data,
   });
 };

@@ -1,15 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt";
+import { UnauthorizedError } from "../utils/appError";
 
 export const authenticate = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return next(new UnauthorizedError());
   }
 
   const token = authHeader.split(" ")[1];
@@ -24,6 +25,6 @@ export const authenticate = (
 
     next();
   } catch {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    next(new UnauthorizedError("Invalid or expired token"));
   }
 };

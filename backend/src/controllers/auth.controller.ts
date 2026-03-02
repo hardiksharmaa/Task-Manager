@@ -1,69 +1,55 @@
 import { Request, Response } from "express";
 import { registerUser, loginUser } from "../services/auth.service";
 import { refreshAccessToken, logoutUser } from "../services/auth.service";
+import { asyncHandler } from "../utils/asyncHandler";
+import { UnauthorizedError } from "../utils/appError";
 
-export const register = async (req: Request, res: Response) => {
-  try {
-    const { email, password, name } = req.body;
+export const register = asyncHandler(async (req: Request, res: Response) => {
+  const { email, password, name } = req.body;
 
-    const user = await registerUser(email, password, name);
+  const user = await registerUser(email, password, name);
 
-    res.status(201).json({
-      message: "User registered successfully",
-      user: { id: user.id, email: user.email },
-    });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+  res.status(201).json({
+    success: true,
+    message: "User registered successfully",
+    user: { id: user.id, email: user.email },
+  });
+});
+
+export const login = asyncHandler(async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  const { accessToken, refreshToken } = await loginUser(email, password);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+  });
+
+  res.status(200).json({ success: true, accessToken });
+});
+
+export const refresh = asyncHandler(async (req: Request, res: Response) => {
+  const token = req.cookies.refreshToken;
+
+  if (!token) {
+    throw new UnauthorizedError("No refresh token");
   }
-};
 
-export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
+  const newAccessToken = await refreshAccessToken(token);
 
-    const { accessToken, refreshToken } =
-      await loginUser(email, password);
+  res.status(200).json({ success: true, accessToken: newAccessToken });
+});
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-    });
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+  const token = req.cookies.refreshToken;
 
-    res.status(200).json({ accessToken });
-  } catch (err: any) {
-    res.status(401).json({ error: err.message });
+  if (token) {
+    await logoutUser(token);
   }
-};
 
-export const refresh = async (req: Request, res: Response) => {
-  try {
-    const token = req.cookies.refreshToken;
+  res.clearCookie("refreshToken");
 
-    if (!token) {
-      return res.status(401).json({ error: "No refresh token" });
-    }
-
-    const newAccessToken = await refreshAccessToken(token);
-
-    res.status(200).json({ accessToken: newAccessToken });
-  } catch (err: any) {
-    res.status(401).json({ error: "Invalid refresh token" });
-  }
-};
-
-export const logout = async (req: Request, res: Response) => {
-  try {
-    const token = req.cookies.refreshToken;
-
-    if (token) {
-      await logoutUser(token);
-    }
-
-    res.clearCookie("refreshToken");
-
-    res.status(200).json({ message: "Logged out successfully" });
-  } catch {
-    res.status(500).json({ error: "Logout failed" });
-  }
-};
+  res.status(200).json({ success: true, message: "Logged out successfully" });
+});

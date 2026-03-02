@@ -6,85 +6,88 @@ import {
   deleteTask,
 } from "../services/task.service";
 import { prisma } from "../db/prisma";
+import { asyncHandler } from "../utils/asyncHandler";
+import { NotFoundError } from "../utils/appError";
 
 type IdParams = { id: string };
 
-export const create = async (req: Request, res: Response) => {
-  try {
-    const task = await createTask(req.user!.id, req.body);
-    res.status(201).json(task);
-  } catch {
-    res.status(400).json({ error: "Failed to create task" });
-  }
-};
+export const create = asyncHandler(async (req: Request, res: Response) => {
+  const task = await createTask(req.user!.id, req.body);
+  res.status(201).json({ success: true, data: task });
+});
 
-export const getAll = async (req: Request, res: Response) => {
-  const { page = 1, limit = 10, status, search } = req.query;
+export const getAll = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, status, search } = (req as any).validated as {
+    page: number;
+    limit: number;
+    status?: string;
+    search?: string;
+  };
 
-  const skip = (Number(page) - 1) * Number(limit);
+  const skip = (page - 1) * limit;
 
-  const tasks = await prisma.task.findMany({
-    where: {
-      userId: req.user!.id,
-      ...(status ? { status: status as any } : {}),
-      ...(search
-        ? {
-            title: {
-              contains: search as string,
-              mode: "insensitive",
-            },
-          }
-        : {}),
-    },
-    skip,
-    take: Number(limit),
-    orderBy: { createdAt: "desc" },
-  });
+  const where = {
+    userId: req.user!.id,
+    ...(status ? { status: status as any } : {}),
+    ...(search
+      ? { title: { contains: search, mode: "insensitive" as const } }
+      : {}),
+  };
 
-  const total = await prisma.task.count({
-    where: { userId: req.user!.id },
-  });
+  const [tasks, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.task.count({ where }),
+  ]);
 
   res.json({
+    success: true,
     data: tasks,
-    meta: {
-      total,
-      page: Number(page),
-      limit: Number(limit),
-    },
+    meta: { total, page, limit },
   });
-};
+});
 
-export const getOne = async (req: Request<IdParams>, res: Response) => {
+export const getOne = asyncHandler(async (req: Request<IdParams>, res: Response) => {
   const task = await getTaskById(req.params.id, req.user!.id);
 
-  if (!task) return res.status(404).json({ error: "Not found" });
+  if (!task) throw new NotFoundError("Task not found");
 
-  res.json(task);
-};
+  res.json({ success: true, data: task });
+});
 
-export const update = async (req: Request<IdParams>, res: Response) => {
-  await updateTask(req.params.id, req.user!.id, req.body);
-  res.json({ message: "Updated" });
-};
+export const update = asyncHandler(async (req: Request<IdParams>, res: Response) => {
+  const task = await getTaskById(req.params.id, req.user!.id);
 
-export const remove = async (req: Request<IdParams>, res: Response) => {
+  if (!task) throw new NotFoundError("Task not found");
+
+  const updated = await updateTask(req.params.id, req.user!.id, req.body);
+  res.json({ success: true, data: updated });
+});
+
+export const remove = asyncHandler(async (req: Request<IdParams>, res: Response) => {
+  const task = await getTaskById(req.params.id, req.user!.id);
+
+  if (!task) throw new NotFoundError("Task not found");
+
   await deleteTask(req.params.id, req.user!.id);
-  res.json({ message: "Deleted" });
-};
+  res.status(200).json({ success: true, message: "Task deleted" });
+});
 
-export const toggle = async (req: Request<IdParams>, res: Response) => {
+export const toggle = asyncHandler(async (req: Request<IdParams>, res: Response) => {
   const task = await getTaskById(req.params.id, req.user!.id);
 
-  if (!task) return res.status(404).json({ error: "Not found" });
+  if (!task) throw new NotFoundError("Task not found");
 
-  const newStatus =
-    task.status === "DONE" ? "TODO" : "DONE";
+  const newStatus = task.status === "DONE" ? "TODO" : "DONE";
 
   const updated = await prisma.task.update({
     where: { id: task.id },
     data: { status: newStatus },
   });
 
-  res.json(updated);
-};
+  res.json({ success: true, data: updated });
+});
