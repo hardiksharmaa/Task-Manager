@@ -8,12 +8,14 @@ interface AuthContextType {
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const refresh = async () => {
@@ -24,6 +26,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch {
         setAccessToken(null);
         setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -47,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ login, register, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ login, register, logout, isAuthenticated, loading }}>
       {children}
     </AuthContext.Provider>
   );

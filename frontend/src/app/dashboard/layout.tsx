@@ -14,10 +14,17 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, loading, isAuthenticated } = useAuth();
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
+    if (loading) return;
+
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+
     const checkAuth = async () => {
       try {
         await api.get("/tasks");
@@ -28,7 +35,7 @@ export default function DashboardLayout({
     };
 
     checkAuth();
-  }, []);
+  }, [loading, isAuthenticated]);
 
   if (!authorized) {
     return (
